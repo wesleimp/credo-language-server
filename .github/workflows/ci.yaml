@@ -1,0 +1,60 @@
+name: ci
+
+on:
+  push:
+    branches: [main, actions-test]
+  pull_request:
+    branches: [main, actions-test]
+
+jobs:
+  verify:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        otp: [24, 25]
+        elixir: [1.12.x, 1.13.x, 1.14.x]
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      - name: Branch-Name
+        uses: nelonoel/branch-name@v1.0.1
+
+      - name: Setup Exilir
+        uses: actions/setup-elixir@v1
+        with:
+          otp-version: ${{ matrix.otp }}
+          elixir-version: ${{ matrix.elixir }}
+          experimental-otp: true
+
+      - name: Deps Cache
+        uses: actions/cache@v3
+        id: deps-cache
+        with:
+          path: deps
+          key: ${{ runner.os }}-mix-${{ hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }}
+
+      - name: Build Cache
+        uses: actions/cache@v3
+        id: build-cache
+        with:
+          path: _build
+          key: ${{ runner.os }}-build-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }}
+
+      - name: Build
+        run: |
+          mix do local.hex --force, local.rebar --force
+          mix do deps.get, deps.compile
+          mix compile
+
+      - name: Run tests
+        run: |
+          mix test
+
+      - name: Check format
+        run: mix format --check-formatted
+
+      - name: Check linter
+        run: mix credo --strict -a
