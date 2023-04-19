@@ -7,49 +7,83 @@ on:
     branches: [main, actions-test]
 
 jobs:
-  verify:
+  build_and_test:
+    name: build and test (Elixir ${{matrix.elixir}} | Erlang/OTP ${{matrix.otp}})
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        otp: [24, 25]
-        elixir: [1.13.x, 1.14.x]
-
+        include:
+          - elixir: 1.12.x
+            otp: 22.x
+          - elixir: 1.12.x
+            otp: 23.x
+          - elixir: 1.13.x
+            otp: 22.x
+          - elixir: 1.13.x
+            otp: 23.x
+          - elixir: 1.13.x
+            otp: 24.x
+          - elixir: 1.13.x
+            otp: 25.x
+          - elixir: 1.14.x
+            otp: 23.x
+          - elixir: 1.14.x
+            otp: 24.x
+          - elixir: 1.14.x
+            otp: 25.x
+    env:
+      MIX_ENV: test
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v3
-
-      - name: Setup Exilir
-        uses: erlef/setup-beam@v1
+      - uses: actions/checkout@v3
+      - uses: erlef/setup-beam@v1
         with:
-          otp-version: ${{ matrix.otp }}
-          elixir-version: ${{ matrix.elixir }}
+          otp-version: ${{matrix.otp}}
+          elixir-version: ${{matrix.elixir}}
 
-      - name: Deps Cache
-        uses: actions/cache@v3
-        id: deps-cache
-        with:
-          path: deps
-          key: ${{ runner.os }}-mix-${{ hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }}
-
-      - name: Build Cache
-        uses: actions/cache@v3
-        id: build-cache
-        with:
-          path: _build
-          key: ${{ runner.os }}-build-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }}
-
-      - name: Build
+      - name: Install Dependencies
         run: |
-          mix do local.hex --force, local.rebar --force
-          mix do deps.get, deps.compile
-          mix compile
+          mix local.hex --force
+          mix local.rebar --force
+          mix deps.get --only test
 
       - name: Run tests
+        run: mix test
+
+  lint:
+    name: lint (Elixir ${{matrix.elixir}} | Erlang/OTP ${{matrix.otp}})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - elixir: 1.14.x
+            otp: 25.x
+    env:
+      MIX_ENV: test
+    steps:
+      - uses: actions/checkout@v3
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: ${{matrix.otp}}
+          elixir-version: ${{matrix.elixir}}
+
+      - name: Install Dependencies
         run: |
-          mix test
+          mix local.hex --force
+          mix local.rebar --force
+          mix deps.get --only test
 
-      - name: Check format
-        run: mix format --check-formatted
+      - name: Cache build
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.hex
+            ~/.mix
+            _build
+          key: ${{ matrix.otp }}-${{ matrix.elixir }}-lint-build
 
-      - name: Check linter
-        run: mix credo --strict -a
+      - name: Check lint
+        run: |
+          mix format --check-formatted
+          mix credo --strict
