@@ -17,13 +17,10 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v2
-
-      - name: Branch-Name
-        uses: nelonoel/branch-name@v1.0.1
+        uses: actions/checkout@v3
 
       - name: Setup Exilir
-        uses: actions/setup-elixir@v1
+        uses: erlef/setup-beam@v1
         with:
           otp-version: ${{ matrix.otp }}
           elixir-version: ${{ matrix.elixir }}
