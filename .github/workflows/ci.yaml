@@ -13,8 +13,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        elixir: [1.12.x, 1.13.x, 1.14.x]
-        otp: [24.x, 25.x]
+        include:
+          - elixir: 1.12.x
+            otp: 24.x
+          - elixir: 1.13.x
+            otp: 24.x
+          - elixir: 1.14.x
+            otp: 24.x
+          - elixir: 1.13.x
+            otp: 25.x
+          - elixir: 1.14.x
+            otp: 25.x
     env:
       MIX_ENV: test
     steps:
