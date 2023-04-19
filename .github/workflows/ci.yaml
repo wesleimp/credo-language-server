@@ -8,10 +8,9 @@ on:
 
 jobs:
   verify:
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
         otp: [24, 25]
         elixir: [1.13.x, 1.14.x]
 
